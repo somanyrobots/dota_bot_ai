@@ -61,10 +61,9 @@ maxPlayerID = 11;
 
 -- TODO
 -- 1. determine which slots contain players - don't pick for those slots
--- 2. determine what heroes have already been picked - don't pick those heroes - DONE
--- 4. copy the default behavior of picking everything at once after players have picked, though
--- 5. add some jitter, so the bots pick at slightly more random times
--- 6. reimplement farm priority based system
+-- 2. determine which slots are assigned to which teams - enables strategy
+-- 3. add some jitter, so the bots pick at slightly more random times
+-- 4. implement various smart picking strategies
 function Think()
   local startPickTime = -70;
   local timePerPick = 1;
