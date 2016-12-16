@@ -3,6 +3,8 @@ require( GetScriptDirectory().."/mode_defend_ally_generic" );
 ----------------------------------------------------------------------------------------------------
 
 function OnStart()
+	-- print( "mode_defend_ally_shadow_shaman.OnStart" );
+
 	-- Do the standard OnStart
 	mode_generic_defend_ally.OnStart();
 end
@@ -10,6 +12,7 @@ end
 ----------------------------------------------------------------------------------------------------
 
 function OnEnd()
+	-- print( "mode_defend_ally_shadow_shaman.OnEnd" );
 	-- Do the standard OnEnd
 	mode_generic_defend_ally.OnEnd();
 end
@@ -17,8 +20,9 @@ end
 ----------------------------------------------------------------------------------------------------
 
 function Think()
+	-- print( "mode_defend_ally_shadow_shaman.Think" );
 
-	-- local npcBot = GetBot();
+	local npcBot = GetBot();
 
 	-- Do the standard Think
 	mode_generic_defend_ally.Think()
@@ -31,7 +35,7 @@ function Think()
 		abilityHex = npcBot:GetAbilityByName( "shadow_shaman_voodoo" );
 		if ( abilityHex:IsFullyCastable() )
 		then
-			npcBot:Action_UseAbilityOnLocation( abilityHex, npcBot:GetTarget():GetLocation() );
+			npcBot:Action_UseAbilityOnLocation( abilityHex, npcBot:GetTarget() );
 		end
 	end
 end
@@ -39,7 +43,6 @@ end
 ----------------------------------------------------------------------------------------------------
 
 function GetDesire()
-
 	local npcBot = GetBot();
 	local fBonus = 0.0;
 
@@ -48,6 +51,12 @@ function GetDesire()
 	then
 		abilityHex = npcBot:GetAbilityByName( "shadow_shaman_voodoo" );
 		if ( abilityHex:IsFullyCastable() )
+		then
+			fBonus = 0.25;
+		end
+
+		abilityShackle = npcBot:GetAbilityByName( "shadow_shaman_shackles" );
+		if ( abilityShackle:IsFullyCastable() )
 		then
 			fBonus = 0.25;
 		end

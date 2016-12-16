@@ -7,19 +7,19 @@ module( "mode_generic_defend_ally", package.seeall )
 ----------------------------------------------------------------------------------------------------
 
 function OnStart()
-	--print( "mode_generic_defend_ally.OnStart" );
+	-- print( "mode_generic_defend_ally.OnStart" );
 end
 
 ----------------------------------------------------------------------------------------------------
 
 function OnEnd()
-	--print( "mode_generic_defend_ally.OnEnd" );
+	-- print( "mode_generic_defend_ally.OnEnd" );
 end
 
 ----------------------------------------------------------------------------------------------------
 
 function Think()
-	--print( "mode_generic_defend_ally.Think" );
+	-- print( "mode_generic_defend_ally.Think" );
 end
 
 ----------------------------------------------------------------------------------------------------

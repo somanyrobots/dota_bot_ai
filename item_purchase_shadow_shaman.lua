@@ -30,7 +30,6 @@ local tableItemsToBuy = {
 ----------------------------------------------------------------------------------------------------
 
 function ItemPurchaseThink()
-
 	if ( #tableItemsToBuy == 0 )
 	then
 		npcBot:SetNextItemPurchaseValue( 0 );

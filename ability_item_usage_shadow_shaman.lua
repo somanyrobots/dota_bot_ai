@@ -8,6 +8,7 @@ castShacklesDesire = 0;
 castMassSerpentWardsDesire = 0;
 
 function AbilityUsageThink()
+  -- print("shadow shaman AbilityUsageThink");
 
 	local npcBot = GetBot();
 
@@ -27,7 +28,7 @@ function AbilityUsageThink()
 
 	if ( castHexDesire > 0 )
 	then
-		npcBot:Action_UseAbilityOnEntity( abilityHex, castHexLocation );
+		npcBot:Action_UseAbilityOnEntity( abilityHex, castHexTarget );
 		return;
 	end
 
@@ -39,13 +40,13 @@ function AbilityUsageThink()
 
 	if (castEtherShockDesire > 0 )
 	then
-		npcBot:Action_UseAbilityOnEntity( abilityEtherShock, castQTarget );
+		npcBot:Action_UseAbilityOnEntity( abilityEtherShock, castEtherShockTarget );
 		return;
 	end
 
 	if (castShacklesDesire > 0 )
 	then
-		npcBot:Action_UseAbilityOnEntity( abilityShackles, castETarget );
+		npcBot:Action_UseAbilityOnEntity( abilityShackles, castShacklesTarget );
 		return;
 	end
 
@@ -74,22 +75,28 @@ function ConsiderEtherShock()
 		return BOT_ACTION_DESIRE_NONE, 0;
 	end;
 
+  -- print("shadow shaman ConsiderEtherShock");
+
 	-- Get some of its values
 	-- TODO: figure out how to get ether shock's cone radius
-	-- local nRadius = abilityQ:GetSpecialValueInt( "light_strike_array_aoe" );
 	local nCastRange = abilityEtherShock:GetCastRange();
 	local nDamage = abilityEtherShock:GetAbilityDamage();
+  local nStartRadius = abilityEtherShock:GetSpecialValueInt("start_radius");
+  local nEndRadius = abilityEtherShock:GetSpecialValueInt("end_radius");
+  local nEndDistance = abilityEtherShock:GetSpecialValueInt("end_distance");
+  local nTargets = abilityEtherShock:GetSpecialValueInt("targets");
 
 	--------------------------------------
 	-- Mode based usage
 	--------------------------------------
 
-	-- TODO: Implement function to determine if, by ether shocking a unit within range, we can hit units within the cone distance
+	-- TODO: Implement function to determine if, by ether shocking a unit within range, we can hit units within the cone
 
 
 	-- TODO: implement
 	-- if we're farming, and can hit several units with ether shock
 	if ( npcBot:GetActiveMode() == BOT_MODE_FARM ) then
+    -- local creeps = npcBot:GetNearbyCreeps();
 		-- local locationAoE = npcBot:FindAoELocation( true, false, npcBot:GetLocation(), nCastRange, nRadius, 0, nDamage );
 
 		-- if ( locationAoE.count >= 3 ) then
@@ -118,7 +125,8 @@ function ConsiderEtherShock()
 	if ( npcBot:GetActiveMode() == BOT_MODE_ROAM or
 		 npcBot:GetActiveMode() == BOT_MODE_TEAM_ROAM or
 		 npcBot:GetActiveMode() == BOT_MODE_GANK or
-		 npcBot:GetActiveMode() == BOT_MODE_DEFEND_ALLY )
+		 npcBot:GetActiveMode() == BOT_MODE_DEFEND_ALLY or
+     npcBot:GetActiveMode() == BOT_MODE_ATTACK )
 	then
 		local npcTarget = npcBot:GetTarget();
 
@@ -126,7 +134,7 @@ function ConsiderEtherShock()
 		then
 			if ( CanCastTargetedSpellOnTarget( npcTarget ) )
 			then
-				return BOT_ACTION_DESIRE_HIGH, npcTarget:GetLocation();
+				return BOT_ACTION_DESIRE_VERYHIGH, npcTarget;
 			end
 		end
 	end
@@ -137,7 +145,6 @@ end
 ----------------------------------------------------------------------------------------------------
 
 function ConsiderHex()
-
 	local npcBot = GetBot();
 
 	-- Make sure it's castable
@@ -145,18 +152,51 @@ function ConsiderHex()
 		return BOT_ACTION_DESIRE_NONE, 0;
 	end;
 
+  -- print("shadow shaman ConsiderHex");
+
 	-- Get some of its values
-	local nCastRange = abilityDS:GetCastRange();
+	local nCastRange = abilityHex:GetCastRange();
+
+  --------------------------------------
+  -- Global high-priorty usage
+  --------------------------------------
+
+  -- Check for a channeling enemy
+  local tableNearbyEnemyHeroes = npcBot:GetNearbyHeroes( nCastRange + 400, true, BOT_MODE_NONE );
+  for _,npcEnemy in pairs( tableNearbyEnemyHeroes )
+  do
+  	if ( npcEnemy:IsChanneling() )
+  	then
+  		return BOT_ACTION_DESIRE_HIGH, npcEnemy;
+  	end
+  end
 
 	--------------------------------------
 	-- Mode based usage
 	--------------------------------------
 
+  -- If we're seriously retreating, see if we can land a stun on someone who's damaged us recently
+	if ( npcBot:GetActiveMode() == BOT_MODE_RETREAT and npcBot:GetActiveModeDesire() >= BOT_MODE_DESIRE_HIGH )
+	then
+		local tableNearbyEnemyHeroes = npcBot:GetNearbyHeroes( nCastRange + 400, true, BOT_MODE_NONE );
+		for _,npcEnemy in pairs( tableNearbyEnemyHeroes )
+		do
+			if ( npcBot:WasRecentlyDamagedByHero( npcEnemy, 2.0 ) )
+			then
+				if ( CanCastTargetedSpellOnTarget( npcEnemy ) )
+				then
+					return BOT_ACTION_DESIRE_MODERATE, npcEnemy;
+				end
+			end
+		end
+	end
+
 	-- If we're going after someone
 	if ( npcBot:GetActiveMode() == BOT_MODE_ROAM or
 		 npcBot:GetActiveMode() == BOT_MODE_TEAM_ROAM or
 		 npcBot:GetActiveMode() == BOT_MODE_GANK or
-		 npcBot:GetActiveMode() == BOT_MODE_DEFEND_ALLY )
+		 npcBot:GetActiveMode() == BOT_MODE_DEFEND_ALLY or
+     npcBot:GetActiveMode() == BOT_MODE_ATTACK )
 	then
 		local npcTarget = npcBot:GetTarget();
 
@@ -164,7 +204,7 @@ function ConsiderHex()
 		then
 			if ( CanCastTargetedSpellOnTarget( npcTarget ) )
 			then
-				return BOT_ACTION_DESIRE_MODERATE, npcEnemy:GetLocation();
+				return BOT_ACTION_DESIRE_VERYHIGH, npcTarget;
 			end
 		end
 	end
@@ -177,7 +217,6 @@ end
 ----------------------------------------------------------------------------------------------------
 
 function ConsiderShackles()
-
 	local npcBot = GetBot();
 
 	-- Make sure it's castable
@@ -185,13 +224,67 @@ function ConsiderShackles()
 		return BOT_ACTION_DESIRE_NONE, 0;
 	end
 
+  -- print("shadow shaman ConsiderShackles");
+
 	-- Get some of its values
+	-- local nCastPoint = abilityShackles:GetCastPoint();
+	local nCastRange = abilityShackles:GetCastRange();
+	local nTotalDamage = abilityShackles:GetSpecialValueFloat('total_damage');
+
+  --------------------------------------
+  -- Global high-priorty usage
+  --------------------------------------
+
+	-- Check for a channeling enemy
+	local tableNearbyEnemyHeroes = npcBot:GetNearbyHeroes( nCastRange + 300, true, BOT_MODE_NONE );
+	for _,npcEnemy in pairs( tableNearbyEnemyHeroes )
+	do
+		if ( npcEnemy:IsChanneling() )
+		then
+			return BOT_ACTION_DESIRE_HIGH, npcEnemy;
+		end
+	end
+
+	--------------------------------------
+	-- Mode based usage
+	--------------------------------------
+
+	-- If we're going after someone
+	if ( npcBot:GetActiveMode() == BOT_MODE_ROAM or
+		 npcBot:GetActiveMode() == BOT_MODE_TEAM_ROAM or
+		 npcBot:GetActiveMode() == BOT_MODE_GANK or
+		 npcBot:GetActiveMode() == BOT_MODE_DEFEND_ALLY or
+     npcBot:GetActiveMode() == BOT_MODE_ATTACK )
+	then
+		local npcTarget = npcBot:GetTarget();
+
+		if ( npcTarget ~= nil )
+		then
+			if ( CanCastTargetedSpellOnTarget( npcTarget ) )
+			then
+				return BOT_ACTION_DESIRE_VERYHIGH, npcTarget;
+			end
+		end
+	end
+
+	return BOT_ACTION_DESIRE_NONE, 0;
+end
+
+function ConsiderMassSerpentWards()
+	local npcBot = GetBot();
 	local nCastRange = abilityMassSerpentWards:GetCastRange();
+  local wardRange = 600; -- hardcoded for now, because it's not saved as an ability property
+
+	-- Make sure it's castable
+	if ( not abilityShackles:IsFullyCastable() ) then
+		return BOT_ACTION_DESIRE_NONE, 0;
+	end
 
 	-- If we're in a teamfight, use it on the scariest enemy
 	-- TODO: add an exception to avoid ward-trapping heroes who can get out
+	-- If we're in a teamfight, use it on the scariest enemy
 	local tableNearbyAttackingAlliedHeroes = npcBot:GetNearbyHeroes( 1000, false, BOT_MODE_ATTACK );
-	if ( #tableNearbyAttackingAlliedHeroes >= 4 )
+	if ( #tableNearbyAttackingAlliedHeroes >= 0 )
 	then
 
 		local npcMostDangerousEnemy = nil;
@@ -218,7 +311,6 @@ function ConsiderShackles()
 	end
 
 	-- If we're pushing a tower, drop wards near the tower
-	-- TODO: implement
 	if ( npcBot:GetActiveMode() == BOT_MODE_PUSH_TOWER_TOP or
 		 npcBot:GetActiveMode() == BOT_MODE_PUSH_TOWER_MID or
 		 npcBot:GetActiveMode() == BOT_MODE_PUSH_TOWER_BOTTOM or
@@ -227,18 +319,34 @@ function ConsiderShackles()
 		 npcBot:GetActiveMode() == BOT_MODE_DEFEND_TOWER_BOTTOM )
 	then
 		-- TODO: figure out method signature for GetNearbyTowers()
-		-- local tableNearbyTowers = npcBot:GetNearbyTowers( nCastRange, true );
+		-- local tableNearbyTowers = npcBot:GetNearbyTowers( nCastRange + 400, true );
 		-- TODO: Implement
 		-- local locationAoE = npcBot:FindAoELocation( true, false, npcBot:GetLocation(), nCastRange, nRadius, 0, 0 );
+	end
+
+  	-- If we're going after someone
+	if ( npcBot:GetActiveMode() == BOT_MODE_ROAM or
+		 npcBot:GetActiveMode() == BOT_MODE_TEAM_ROAM or
+		 npcBot:GetActiveMode() == BOT_MODE_GANK or
+		 npcBot:GetActiveMode() == BOT_MODE_DEFEND_ALLY or
+     npcBot:GetActiveMode() == BOT_MODE_ATTACK )
+	then
+		local npcTarget = npcBot:GetTarget();
+
+		if ( npcTarget ~= nil )
+		then
+			if ( CanCastTargetedSpellOnTarget( npcTarget ) )
+			then
+				return BOT_ACTION_DESIRE_HIGH, npcTarget:GetLocation();
+			end
+		end
 	end
 
 	-- If we're taking Roshan, drop wards in the Rosh pit
 	-- TODO: Implement
 
-	return BOT_ACTION_DESIRE_NONE, 0;
 
-end
+  -- print("shadow shaman ConsiderMassSerpentWards");
 
-function ConsiderMassSerpentWards()
   return BOT_ACTION_DESIRE_NONE, 0;
 end
