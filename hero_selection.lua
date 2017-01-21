@@ -50,29 +50,27 @@ allBotHeroes = {
 };
 
 picks = {};
-
--- CHANGE THESE VALUES IF YOU'RE GETTING BUGS WITH BOTS NOT PICKING (or infinite loops)
--- To find appropriate values, start a game, open a console, and observe which slots are
--- being used by which players/teams. maxPlayerID shoulud just be the highest-numbered
--- slot in use.
-radiantSlots = {2,3,4,5,6};
-direSlots = {7,8,9,10,11};
-maxPlayerID = 11;
+allSlots = {};
 
 -- TODO
 -- 1. determine which slots contain players - don't pick for those slots
 -- 2. determine which slots are assigned to which teams - enables strategy
 -- 3. add some jitter, so the bots pick at slightly more random times
 -- 4. implement various smart picking strategies
+-- 5. activate quick mode once all humans have picked
 function Think()
   local startPickTime = -70;
   local timePerPick = 1;
+  local radiantSlots = GetTeamPlayers(TEAM_RADIANT);
+  local direSlots = GetTeamPlayers(TEAM_DIRE);
+  for k,v in pairs(radiantSlots) do allSlots[v] = v end
+  for k,v in pairs(direSlots) do allSlots[v] = v end
 
   if not quickMode and (DotaTime() < startPickTime) then
     return;
   end
 
-  picks = GetPicks();
+  picks = GetPicks(allSlots);
   local pickCount = 0;
   for k,v in pairs(picks) do -- have to iterate here, as conditions are not right to use #
     pickCount = pickCount + 1;
@@ -85,21 +83,26 @@ function Think()
 
 	if ( GetTeam() == TEAM_RADIANT and IsTeamsTurnToPick(TEAM_RADIANT)) then
 		for i, potentialSlot in pairs(radiantSlots) do
-      -- print("evaluating slot for radiant ", potentialSlot);
-			if (IsSlotEmpty(potentialSlot)) then
+			if (IsPlayerBot(potentialSlot) and IsSlotEmpty(potentialSlot)) then
 				PickHero(potentialSlot);
   			return;
 			end
 		end
 	elseif ( GetTeam() == TEAM_DIRE and IsTeamsTurnToPick(TEAM_DIRE)) then
 		for i, potentialSlot in pairs(direSlots) do
-      -- print("evaluating slot for dire ", potentialSlot);
-			if (IsSlotEmpty(potentialSlot)) then
+			if (IsPlayerBot(potentialSlot) and IsSlotEmpty(potentialSlot)) then
 				PickHero(potentialSlot);
   			return;
 			end
 		end
 	end
+end
+
+function printSlots(slots)
+  print("slots are");
+  for k,v in pairs(slots) do
+    print(k,v);
+  end
 end
 
 function IsTeamsTurnToPick(team)
@@ -119,6 +122,13 @@ function IsTeamsTurnToPick(team)
   end
 end
 
+function slotBelongsToTeam(slot, team)
+  for i in pairs(GetTeamPlayers(team)) do
+    return true if i == slot;
+  end
+  return false;
+end
+
 function IsSlotEmpty(slot)
   local slotEmpty = true;
   for pickedSlot, hero in pairs(picks) do
@@ -134,47 +144,28 @@ end
 
 function PickHero(slot)
   local hero = GetRandomHero();
-  print("picking hero ", hero, " for slot ", slot);
+  -- print("picking hero ", hero, " for slot ", slot);
   SelectHero(slot, hero);
 end
 
 -- haven't found a better way to get already-picked heroes than just looping over all the players
-function GetPicks()
+-- takes a list of slots to search over
+function GetPicks(slots)
 	local selectedHeroes = {};
-  local pickedSlots = {};
-	for i=0, maxPlayerID do
+  for i, slot in pairs(slots) do
 		local hName = GetSelectedHeroName(i);
 		if (hName ~= nil and hName ~= "") then
-			selectedHeroes[i] = hName;
+			selectedHeroes[slot] = hName;
 		end
 	end
 	return selectedHeroes;
-end
-
--- PLACEHOLDER
--- need to figure out an actual way to determine this, not just hardcoding it
-function slotBelongsToTeam(slot, team)
-  if (team == TEAM_RADIANT) then
-    for index,rSlot in pairs(radiantSlots) do
-      if (slot == rSlot) then
-        return true;
-      end;
-    end
-  elseif (team == TEAM_DIRE) then
-    for index,dSlot in pairs(direSlots) do
-      if (slot == dSlot) then
-        return true;
-      end
-    end
-  end
-	return false;
 end
 
 -- first, check the list of required heroes and pick from those
 -- then try the whole bot pool
 function GetRandomHero()
 	local hero;
-	local picks = GetPicks();
+	local picks = GetPicks(allSlots);
   local selectedHeroes = {};
   for slot, hero in pairs(picks) do
     selectedHeroes[hero] = true;
@@ -186,7 +177,7 @@ function GetRandomHero()
 	end
 
 	while ( selectedHeroes[hero] == true ) do
-		print("repicking because " .. hero .. " was taken.")
+		-- print("repicking because " .. hero .. " was taken.")
 		hero = allBotHeroes[RandomInt(1, #allBotHeroes)];
 	end
 
