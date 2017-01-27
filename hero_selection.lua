@@ -2,11 +2,6 @@
 requiredHeroes = {
 };
 
--- change quickMode to true for testing
--- quickMode eliminates the 30s delay before picks begin
--- it also eliminates the delay between bot picks
-quickMode = false;
-
 allBotHeroes = {
 		'npc_dota_hero_axe',
 		'npc_dota_hero_bane',
@@ -62,8 +57,8 @@ function ShouldPick()
   local timePerPick;
   local jitter;
 
-  if (false and AllHumansHavePicked(allSlots)) then
-    minimumPickTime = DotaTime();
+  if (HaveAllHumansPicked(allSlots)) then
+    minimumPickTime = -75;
     timePerPick = 0.1;
     jitter = 0;
   else
