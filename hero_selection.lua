@@ -52,22 +52,27 @@ allBotHeroes = {
 picks = {};
 allSlots = {};
 
--- TODO
--- 1. determine which slots contain players - don't pick for those slots
--- 2. determine which slots are assigned to which teams - enables strategy
--- 3. add some jitter, so the bots pick at slightly more random times
--- 4. implement various smart picking strategies
--- 5. activate quick mode once all humans have picked
-function Think()
-  local startPickTime = -70;
-  local timePerPick = 1;
-  local radiantSlots = GetTeamPlayers(TEAM_RADIANT);
-  local direSlots = GetTeamPlayers(TEAM_DIRE);
-  for k,v in pairs(radiantSlots) do allSlots[v] = v end
-  for k,v in pairs(direSlots) do allSlots[v] = v end
+-- decides if it's a good time to pick
+-- if there are no humans in the match, all picks should happen instantly
+--   (but in random order)
+-- if there are humans, picks should not start right away, and then should occur
+--   in random order, at regular-but-jittery intervals
+function ShouldPick()
+  local minimumPickTime = -70; -- no picks should happen earlier than this
+  local timePerPick;
+  local jitter;
 
-  if not quickMode and (DotaTime() < startPickTime) then
-    return;
+  if (false and AllHumansHavePicked(allSlots)) then
+    minimumPickTime = DotaTime();
+    timePerPick = 0.1;
+    jitter = 0;
+  else
+    timePerPick = ((-minimumPickTime - 5) / 10);
+    jitter = RandomFloat(-5,5)
+  end
+
+  if (DotaTime() < minimumPickTime) then
+    return false;
   end
 
   picks = GetPicks(allSlots);
@@ -75,20 +80,39 @@ function Think()
   for k,v in pairs(picks) do -- have to iterate here, as conditions are not right to use #
     pickCount = pickCount + 1;
   end
-  local pickTime = startPickTime + (timePerPick * pickCount);
+  local pickTime = minimumPickTime + (timePerPick * pickCount) + jitter
 
-  if not quickMode and  (DotaTime() < pickTime) then
+  if (DotaTime() < pickTime) then
+    return false
+  end
+
+  return true
+end
+
+-- TODO
+-- 1. determine which slots contain players - don't pick for those slots
+-- 2. determine which slots are assigned to which teams - enables strategy
+-- 3. add some jitter, so the bots pick at slightly more random times
+-- 4. implement various smart picking strategies
+-- 5. activate quick mode once all humans have picked
+function Think()
+  local radiantSlots = GetTeamPlayers(TEAM_RADIANT);
+  local direSlots = GetTeamPlayers(TEAM_DIRE);
+  for k,v in pairs(radiantSlots) do allSlots[v] = v end
+  for k,v in pairs(direSlots) do allSlots[v] = v end
+
+  if not ShouldPick() then
     return;
   end
 
-	if ( GetTeam() == TEAM_RADIANT and IsTeamsTurnToPick(TEAM_RADIANT)) then
+	if ( GetTeam() == TEAM_RADIANT and isTeamsTurnToPick(TEAM_RADIANT)) then
 		for i, potentialSlot in pairs(radiantSlots) do
 			if (IsPlayerBot(potentialSlot) and IsSlotEmpty(potentialSlot)) then
 				PickHero(potentialSlot);
   			return;
 			end
 		end
-	elseif ( GetTeam() == TEAM_DIRE and IsTeamsTurnToPick(TEAM_DIRE)) then
+	elseif ( GetTeam() == TEAM_DIRE and isTeamsTurnToPick(TEAM_DIRE)) then
 		for i, potentialSlot in pairs(direSlots) do
 			if (IsPlayerBot(potentialSlot) and IsSlotEmpty(potentialSlot)) then
 				PickHero(potentialSlot);
@@ -105,7 +129,20 @@ function printSlots(slots)
   end
 end
 
-function IsTeamsTurnToPick(team)
+-- probably you're always passing allSlots to this
+function HaveAllHumansPicked(slots)
+  for i,slot in pairs(slots) do
+    if (not IsPlayerBot(slot) and IsSlotEmpty(slot)) then
+      return false
+    else
+      return true
+    end
+  end
+end
+
+
+-- should ignore human players entirely
+function isTeamsTurnToPick(team)
   local radiantHeroCount = 0;
   local direHeroCount = 0;
   for pickedSlot, hero in pairs(picks) do
@@ -124,7 +161,7 @@ end
 
 function slotBelongsToTeam(slot, team)
   for i in pairs(GetTeamPlayers(team)) do
-    return true if i == slot;
+    if (i == slot) then return true end;
   end
   return false;
 end
