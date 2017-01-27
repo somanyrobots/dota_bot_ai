@@ -105,28 +105,21 @@ function Think()
     return;
   end
 
-	if ( GetTeam() == TEAM_RADIANT and isTeamsTurnToPick(TEAM_RADIANT)) then
-		for i, potentialSlot in pairs(radiantSlots) do
-			if (IsPlayerBot(potentialSlot) and IsSlotEmpty(potentialSlot)) then
-				PickHero(potentialSlot);
-  			return;
-			end
+	if ( GetTeam() == TEAM_RADIANT ) then
+    slot = radiantSlots[RandomInt(1, #radiantSlots)];
+
+		if (IsPlayerBot(slot) and IsSlotEmpty(slot)) then
+			PickHero(slot);
+			return;
 		end
-	elseif ( GetTeam() == TEAM_DIRE and isTeamsTurnToPick(TEAM_DIRE)) then
-		for i, potentialSlot in pairs(direSlots) do
-			if (IsPlayerBot(potentialSlot) and IsSlotEmpty(potentialSlot)) then
-				PickHero(potentialSlot);
-  			return;
-			end
+	elseif ( GetTeam() == TEAM_DIRE ) then
+    slot = direSlots[RandomInt(1, #direSlots)];
+
+		if (IsPlayerBot(slot) and IsSlotEmpty(slot)) then
+			PickHero(slot);
+			return;
 		end
 	end
-end
-
-function printSlots(slots)
-  print("slots are");
-  for k,v in pairs(slots) do
-    print(k,v);
-  end
 end
 
 -- probably you're always passing allSlots to this
@@ -138,32 +131,6 @@ function HaveAllHumansPicked(slots)
       return true
     end
   end
-end
-
-
--- should ignore human players entirely
-function isTeamsTurnToPick(team)
-  local radiantHeroCount = 0;
-  local direHeroCount = 0;
-  for pickedSlot, hero in pairs(picks) do
-    if slotBelongsToTeam(pickedSlot, TEAM_RADIANT) then
-      radiantHeroCount = radiantHeroCount + 1;
-    else
-      direHeroCount = direHeroCount + 1;
-    end
-  end
-  if (team == TEAM_RADIANT) then
-    return (radiantHeroCount <= direHeroCount);
-  else
-    return (direHeroCount <= radiantHeroCount);
-  end
-end
-
-function slotBelongsToTeam(slot, team)
-  for i in pairs(GetTeamPlayers(team)) do
-    if (i == slot) then return true end;
-  end
-  return false;
 end
 
 function IsSlotEmpty(slot)
